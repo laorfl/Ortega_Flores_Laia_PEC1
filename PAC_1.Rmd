@@ -1,0 +1,121 @@
+---
+title: PAC_1
+author: "Laia Ortega i Flores"
+date: "2025-03-25"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+# Afegeixo això perque el tamany de tots els gràfics sigui el mateix
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 4, 
+  fig.height = 2)
+```
+
+# Sobre R Markdown
+
+Benvingut/da al Rmd la PAC 1.
+Abans de començar, establiré working directory i packages que necessitare. 
+
+```{r}
+setwd("C:/Users/laia/OneDrive/Master-UOC/ADOmiques/Laia_ortega_flores_PAC1")
+
+# Carrego les llibreries necessaries
+library("SummarizedExperiment")
+library("limma")
+library("ggplot2")
+library("dplyr")
+library("pheatmap")
+library("readxl")
+```
+
+
+# Anàlisi de dades
+## Preparació de dades
+
+Es carreguen les dades i fem parsing
+```{r}
+# Llegirem l'excel i fem que les dades siguin en format dataframe
+raw_data <- read_xlsx("TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet = 1) %>% as.data.frame()
+metadata_pagina <- read_excel("TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet = 2)
+
+
+# Agafo les columnes "grup" de la pagina de metadades
+metadata <- metadata_pagina[, c("Sample...1", "Phenotype")]
+
+
+# Em quedare les dades que ens interessen
+dades <- raw_data[, c("SequenceModifications", 
+                      "M1_1_MSS", 
+                      "M1_2_MSS", 
+                      "M5_1_MSS", 
+                      "M5_2_MSS",
+                      "T49_1_MSS", 
+                      "T49_2_MSS", 
+                      "M42_1_PD", 
+                      "M42_2_PD", 
+                      "M43_1_PD", 
+                      "M43_2_PD",
+                      "M64_1_PD", 
+                      "M64_2_PD")]
+
+# Tenim dades duplicades, afegire IDs unics
+dades$UnicID <- make.unique(as.character(dades$SequenceModification))
+
+# Definim els noms de fila i eliminem la columna de seqüències úniques i l'original
+rownames(dades) <- dades$UnicID
+dades <- dades[, c(1, ncol(dades))]
+
+# Comprovem que les dades estiguin be
+head(dades, 3)
+```
+
+Un cop tenim les dades carregades i arreglades creem l'objecte summarizedExperiment
+```{r}
+# Necessitare dos valors, nom i grups
+# Noms contindrà els id de cada modificació
+noms <- colnames(dades)
+
+# Grups servirà per dividir les dades entre MSS i PD
+grups <- sub(".*_(.*)$", "\\1", noms)
+
+#Ara faig un dataframe on es miren les dades amb la classificació de grups
+dataframe_metadata <- data.frame(
+  mostra_ID = noms,
+  grup = factor(grups)
+)
+
+# Ara podem veure si les dades s'han classificat correctament
+head(dataframe_metadata, 3)
+
+# Amb el dataframe anterior, podem crear summarized experiment deixo els noms de assay i colData com al exemple
+se <- SummarizedExperiment(
+  assays = list(counts = as.matrix(dades)),
+  colData = dataframe_metadata
+)
+
+# Primera observació del se
+se
+
+```
+
+## Summary
+Ara ja podem començar a fer una mica d'anàlisi
+
+```{r}
+summary(assay(se))
+```
+
+## Anàlisi abundància entre MSS i PD
+
+Ho faig mitjançant un limma anàlisi i ho represento amb un volcanoplot
+
+```{r}
+
+
+```
