@@ -23,8 +23,6 @@ Benvingut/da al Rmd la PAC 1.
 Abans de començar, establiré working directory i packages que necessitare. 
 
 ```{r}
-setwd("C:/Users/laia/Desktop/Master-UOC/ADOmiques/PAC_1")
-
 # Carrego les llibreries necessaries
 library("SummarizedExperiment")
 library("limma")
