@@ -13,8 +13,8 @@ output:
 # Afegeixo això perque el tamany de tots els gràfics sigui el mateix
 knitr::opts_chunk$set(
   echo = TRUE,
-  fig.width = 4, 
-  fig.height = 2)
+  fig.width = 5, 
+  fig.height = 3)
 ```
 
 # Sobre R Markdown
@@ -23,7 +23,7 @@ Benvingut/da al Rmd la PAC 1.
 Abans de començar, establiré working directory i packages que necessitare. 
 
 ```{r}
-setwd("C:/Users/laia/OneDrive/Master-UOC/ADOmiques/Laia_ortega_flores_PAC1")
+setwd("C:/Users/laia/Desktop/Master-UOC/ADOmiques/PAC_1")
 
 # Carrego les llibreries necessaries
 library("SummarizedExperiment")
@@ -64,12 +64,15 @@ dades <- raw_data[, c("SequenceModifications",
                       "M64_1_PD", 
                       "M64_2_PD")]
 
-# Tenim dades duplicades, afegire IDs unics
-dades$UnicID <- make.unique(as.character(dades$SequenceModification))
+# Tenim dades duplicades, fare la mitjana
+dades <- dades %>%
+  group_by(SequenceModifications) %>%
+  summarise(across(everything(), mean, na.rm = TRUE))
 
-# Definim els noms de fila i eliminem la columna de seqüències úniques i l'original
-rownames(dades) <- dades$UnicID
-dades <- dades[, c(1, ncol(dades))]
+# converteixo la primera columna en rownames
+dades <- as.data.frame(dades)
+rownames(dades) <- dades$SequenceModification
+dades <- dades[, -1]
 
 # Comprovem que les dades estiguin be
 head(dades, 3)
@@ -108,6 +111,11 @@ se
 Ara ja podem començar a fer una mica d'anàlisi
 
 ```{r}
+# Veiem les 3 primeres rows de Se, l'assay
+head(assay(se), 3)
+
+# Veiem les 3 primeres rows de Se, la colData
+head(colData(se), 3)
 summary(assay(se))
 ```
 
@@ -158,10 +166,10 @@ Generem un Volcanoplot on es vegi el que s'ha obtingut
 
 ```{r}
 # Filtrem els valors amb un p < 0.05
-resultats_model$significatiu <- ifelse(resultats_model%adj.P.val < 0.05, "Significatiu", "No Significatiu")
+resultats_model$significatiu <- ifelse(resultats_model$adj.P.Val < 0.05, "Significatiu", "No significatiu")
 
 # fem un volcanoplot amb les dades Significants
-ggplot(resultats_model, aes(x = logFC, y = -log10(adj.P.Val), color = Significant)) +
+ggplot(resultats_model, aes(x = logFC, y = -log10(adj.P.Val), color = significatiu)) +
   geom_point(alpha = 0.7, size = 3) +
   scale_color_manual(values = c("#D5B942", "#2A9D8F")) +
   geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
@@ -170,6 +178,41 @@ ggplot(resultats_model, aes(x = logFC, y = -log10(adj.P.Val), color = Significan
   labs(title = "Volcano Plot",
        x = "Log Fold Change (MSS vs PD)", 
        y = "-log10(P-valor ajustat)")
+
+
+```
+
+## PCA
+
+Seguint els apunts, farem un PCA de les nostres dades
+
+```{r}
+# Observo algunes dades que no tenen variànça, aixi que comprovem i arreglem
+
+comprovar_varianca <- apply(assay(se), 1, var, na.rm = TRUE)
+sum(comprovar_varianca == 0)
+
+# Trobem 2 fosfolipids que no han tingut canvi, els treiem per fer el PCA
+dades_no_var <- assay(se)[comprovar_varianca > 0, ]
+dim(dades_no_var)
+
+#Ara podem fer el PCA per veure les agrupacions de mostres dels fosfolipids
+pca <- prcomp(t(dades_no_var), scale = TRUE)
+
+#Ara fem un dataframe epr poder representar-ho en un ggplot
+pca_dades <- data.frame(
+  Mostra = colnames(se),
+  PC1 = pca$x[, 1],
+  PC2 = pca$x[, 2],
+  Grup = colData(se)$grup
+)
+
+#Representació en un plot
+ggplot(pca_dades, aes(x = PC1, y = PC2, color = Grup, label = Mostra)) +
+  geom_point(size =2) +
+  geom_text(vjust = -1) +
+  theme_minimal() +
+  labs(title = "PCA d'abundància de fosfopèptids", x = "PC1", y = "PC2")
 
 
 ```
