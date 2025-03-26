@@ -116,6 +116,60 @@ summary(assay(se))
 Ho faig mitjançant un limma anàlisi i ho represento amb un volcanoplot
 
 ```{r}
+# Fem la matriu amb les dades de assay
+matriu <- assay(se)
+# Prepraració de les dades de la metadata
+metadata_prep <- colData(se)
+
+# Ara comprovem que els noms de les dades de la matriu son tots diferents
+rownames(matriu) <- rownames(se)
+
+# Creem la matriu de disseny de limma 
+matriu_disseny_limma <- model.matrix(~ 0 + metadata_prep$grup)
+colnames(matriu_disseny_limma) <- c("MSS", "PD")
+
+#Ara miro la matriu 
+print(matriu_disseny_limma)
+```
+
+El següent pas, es aplicar el model liniar
+
+```{r}
+model_liniar <- lmFit(matriu, matriu_disseny_limma)
+
+# Faig la amtriu de contrast MSS vs PD
+matriu_contrast <- makeContrasts(MSS_vs_PD = MSS - PD, levels = matriu_disseny_limma)
+
+# Ara aplico el contrast 
+model_contrastat <- contrasts.fit(model_liniar, matriu_contrast)
+
+# Apliquem el model estdístic de Bayes
+model_contrastat <- eBayes(model_contrastat)
+
+# Ara mirem els fosfopeptids que estan diferenciats per abundància
+resultats_model <- topTable(model_contrastat, coef = "MSS_vs_PD", adjust = "fdr", number = Inf)
+
+# Veiem els resultats
+head(resultats_model)
+
+```
+
+Generem un Volcanoplot on es vegi el que s'ha obtingut
+
+```{r}
+# Filtrem els valors amb un p < 0.05
+resultats_model$significatiu <- ifelse(resultats_model%adj.P.val < 0.05, "Significatiu", "No Significatiu")
+
+# fem un volcanoplot amb les dades Significants
+ggplot(resultats_model, aes(x = logFC, y = -log10(adj.P.Val), color = Significant)) +
+  geom_point(alpha = 0.7, size = 3) +
+  scale_color_manual(values = c("#D5B942", "#2A9D8F")) +
+  geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Volcano Plot",
+       x = "Log Fold Change (MSS vs PD)", 
+       y = "-log10(P-valor ajustat)")
 
 
 ```
