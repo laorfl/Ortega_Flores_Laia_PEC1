@@ -117,6 +117,13 @@ head(colData(se), 3)
 summary(assay(se))
 ```
 
+## Creació del docuemnt summarizedExperiment en format binari
+
+```{r}
+# Com ja tenim el se definit, nomes cal guardarlo
+save(se, file = "summarized_experiment.Rda")
+```
+
 ## Anàlisi abundància entre MSS i PD
 
 Ho faig mitjançant un limma anàlisi i ho represento amb un volcanoplot
